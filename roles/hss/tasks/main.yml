@@ -1,0 +1,6 @@
+---
+#1. Launch OAI-CORE-HSS
+- name: Launch 
+  docker: 
+    name: hss
+    image: ubuntu:16.04
