@@ -1,0 +1,206 @@
+######################################################
+#     Installation OAI RAN + CORE + FLEXRIC          #
+######################################################
+
+sudo snap install oai-ran
+sudo snap install oai-cn --edge --devmode
+sudo snap install flexran
+
+######################################################
+######################################################
+
+
+
+
+######################################################
+#                    Prerequis                       #
+######################################################
+
+#WARNING# Retirer d'openSSL.cnf la ligne # RANDILE
+sudo nano /usr/lib/ssl/openssl.cnf 
+#WARNING# Si ubuntu 16.04, upgrade version d'openSSL
+wget https://www.openssl.org/source/old/1.1.0/openssl-1.1.0g.tar.gz
+tar xzvf openssl-1.1.0g.tar.gz
+cd openssl-1.1.0g
+./config
+make
+sudo make install
+
+######################################################
+######################################################
+
+
+
+
+
+
+
+
+######################################################
+#           Installation du CORE OAI                 #
+######################################################
+
+
+# Prerequis installation de mysql proprement
+#############################################
+
+sudo apt-get update
+sudo apt-get install mysql-server
+sudo mysql_secure_installation #Set pwd + yes 
+
+#--> Obtenir un shell mysql
+sudo mysql
+#--> Check methode d'auth
+mysql> SELECT user,authentication_string,plugin,host FROM mysql.user;
+#--> Changement de auth_socket pour le root --> mysql_native_password
+mysql> ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';
+mysql> FLUSH PRIVILEGES;
+mysql> SELECT user,authentication_string,plugin,host FROM mysql.user;
+
+#--> Tester pour voir si ca se connecte
+sudo mysqladmin -p -u root version
+
+
+# Configuration du HSS (HOME SUSCRIBER SERVER)
+###############################################
+
+#--> Creation d'une nouvelle config du HSS + certificat creation 
+# (hss_fd.conf / hss.conf)
+sudo oai-cn.hss-init
+#--> Voir la configuration du HSS 
+sudo oai-cn.hss-conf-get 
+#--> Check "<hostname>.openair4G.eur" in hss_fd.conf
+sudo nano /var/snap/oai-cn/32/hss_fd.conf
+#--> Check mysql pwd and hostname in hss.conf
+sudo nano /var/snap/oai-cn/32/hss.conf
+#--> Certiface creation for MME ???
+sudo oai-cn.hss-init 
+
+# HSS command (START / STATUS / JOURNAL / STOP)
+sudo oai-cn.hss-start 
+sudo oai-cn.hss-status
+sudo oai-cn.hss-journal -efo cat 
+sudo oai-cn.hss-stop
+
+# Check if everything is fine : last output : Initializaing S6a layer : DONE
+
+
+# Configuration du MME (Mobility Management Entity)
+####################################################
+
+sudo oai-cn.mme-init 
+#--> File edited mme.conf /mme_fd.conf
+sudo oai-cn.mme-conf-get
+
+##### IN MME.CONF #####
+
+# HSS_HOSTNAME / GUMMEI_LIST / TAI_LIST 
+# GUMMEI_LIST : global unique mobility Entity identifier 30bit
+# TAI_LIST : tracking area identity  = lors de l'attachement, l'entité MME enregistre l'identité
+            # de la zone de localisation du mobile.
+
+# MME_INTERFACE_NAME_FOR_S1_MME to lo.
+# MME_IPV4_ADDRESS_FOR_S1_MME to 127.0.1.10/24.
+# MME_INTERFACE_NAME_FOR_S11_MME to lo.
+# MME_IPV4_ADDRESS_FOR_S11_MME to 127.0.11.1/8.
+# SGW_IPV4_ADDRESS_FOR_S11 to 127.0.11.2/8
+
+##### IN MME_FD.CONF #####
+
+# IDENTITY match hostname as done for hss_fd.conf file
+# ConnectPeer same as IDENTITY
+
+# --> Running MME
+sudo oai-cn.mme-start 
+
+# MME command (START / STATUS / JOURNAL / STOP)
+sudo oai-cn.mme-start 
+sudo oai-cn.mme-status
+sudo oai-cn.mme-journal -efo cat 
+sudo oai-cn.mme-stop
+
+
+# Configuration du SPGW (serving and packet data network gateway))
+####################################################################
+
+sudo oai-cn.spgw-init 
+# Edit conf spgw.conf
+sudo nano $(oai-cn.spgw-conf-list)
+# SGW_INTERFACE_NAME_FOR_S11 to lo
+# SGW_IPV4_ADDRESS_FOR_S11 to 127.0.11.2/8
+# SGW_INTERFACE_NAME_FOR_S1U_S12_S4_UP to lo
+# SGW_IPV4_ADDRESS_FOR_S1U_S12_S4_UP to 127.0.1.10/24
+# PGW_INTERFACE_NAME_FOR_SGI 
+# DEFAULT_DNS_IPV4_ADDRESS
+
+######################################################
+################## INSTALLATION END ##################
+######################################################
+#                  RUN ALL THE CORE                  #
+######################################################
+sudo oai-cn.start-all 
+sudo oai-cn.stop-all 
+sudo oai-cn.status-all clear
+
+######################################################
+######################################################
+######################################################
+######################################################
+
+
+
+
+
+
+
+######################################################
+#             Installation du RAN OAI                #
+######################################################
+
+sudo snap connect oai-ran:log-observe
+sudo snap connect oai-ran:network-control
+sudo snap connect oai-ran:netlink-connector
+sudo snap connect oai-ran:process-control
+sudo snap connect oai-ran:cpu-control
+sudo snap connect oai-ran:raw-usb
+
+# Configure RAN FILE
+sudo nano $(oai-ran.enb-conf-get)
+# CONFIGURATION 
+#plmn_list = ( { mcc = 208; mnc = 95; mnc_length = 2; } )
+#mme_ip_address = (
+#  {
+#    ipv4       = "127.0.1.10";
+#    ipv6       = "192:168:30::17";
+#    active     = "yes";
+#    preference = "ipv4";
+#  }
+#);
+#NETWORK_INTERFACES: {
+#  ENB_INTERFACE_NAME_FOR_S1_MME            = "lo";
+#  ENB_IPV4_ADDRESS_FOR_S1_MME              = "127.0.1.30/24";
+#  ENB_INTERFACE_NAME_FOR_S1U               = "lo";
+#  ENB_IPV4_ADDRESS_FOR_S1U                 = "127.0.1.30/24";
+#  ENB_PORT_FOR_S1U                         = 2152; # Spec 2152
+#  ENB_IPV4_ADDRESS_FOR_X2C                 = "127.0.1.30/24";
+#  ENB_PORT_FOR_X2C                         = 36422; # Spec 36422
+#};
+
+
+
+# INSTALLATION DE PHP_MY_ADMIN
+sudo apt-get install phpmyadmin
+sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-avaible/phpmyadmin.conf 
+sudo a2enconf phpmyadmin.conf
+service apache2 reload
+sudo systemctl restart apache2 
+
+
+# Go To http://localhost/phpmyadmin
+
+
+######################################################
+#                 UP les interfaces                  #
+######################################################
+
+sudo ifconfig enp0s8 192.168.12.242 netmask 255.255.255.0

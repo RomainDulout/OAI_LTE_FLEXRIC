@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+    cassandra:
+        image: cassandra:2.1
+        container_name: demo-cassandra
+        networks:
+            private_net:
+                ipv4_address: 192.168.68.130
+        environment:
+            CASSANDRA_CLUSTER_NAME: "OAI HSS Cluster"
+            CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+        healthcheck:
+            test: /bin/bash -c "nodetool status"
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+    db_init:
+        image: cassandra:2.1
+        container_name: demo-db-init
+        depends_on: [cassandra]
+        deploy:
+            restart_policy:
+                condition: on-failure
+                max_attempts: 10
+        networks:
+            private_net:
+                ipv4_address: 192.168.68.132
+        volumes:
+            - ../../component/oai-hss/src/hss_rel14/db/oai_db.cql:/home/oai_db.cql
+        entrypoint: /bin/bash -c "cqlsh --file /home/oai_db.cql 192.168.68.130 && echo 'OK'"
+
+
+
+networks:
+    private_net:
+        name: demo-oai-private-net
+        ipam:
+            config:
+                - subnet: 192.168.68.128/26
+    public_net:
+        name: demo-oai-public-net
+        ipam:
+            config:
+                - subnet: 192.168.61.128/26
