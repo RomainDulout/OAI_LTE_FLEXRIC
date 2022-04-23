@@ -136,3 +136,7 @@ wget http://kernel.ubuntu.com/~kernel-ppa/mainline/v4.7/linux-headers-4.7.0-0407
 wget http://kernel.ubuntu.com/~kernel-ppa/mainline/v4.7/linux-image-4.7.0-040700-generic_4.7.0-040700.201607241632_amd64.deb
 
 sudo dpkg -i *.deb
+
+sudo add-apt-repository ppa:cappelikan/ppa
+sudo apt update
+sudo apt install mainline
