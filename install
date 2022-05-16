@@ -188,7 +188,7 @@ sudo nano $(oai-ran.enb-conf-get)
 
 
 
-# INSTALLATION DE PHP_MY_ADMIN
+# INSTALLATION DE PHP_MY_ADMIN2 net
 sudo apt-get install phpmyadmin
 sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-avaible/phpmyadmin.conf 
 sudo a2enconf phpmyadmin.conf
@@ -203,4 +203,19 @@ sudo systemctl restart apache2
 #                 UP les interfaces                  #
 ######################################################
 
-sudo ifconfig enp0s8 192.168.12.242 netmask 255.255.255.0
+sudo ifconfig enp0s8 192.168.10.10 netmask 255.255.255.0
+
+# Creation interface entre boucle locale UE <--> eNB 
+sudo ifconfig lo: 127.0.0.2 network 255.0.0.0 up
+
+
+# Building frome sources
+./build_oai -I --install-optional-packages
+
+######################################################
+#                 INSTALLATION freeDiameter          #
+######################################################
+sudo apt-get install mercurial cmake make gcc g++ bison flex libsctp-dev libgnutls-dev libgcrypt-dev libidn11-dev
+hg clone http://www.freediameter.net/hg/freeDiameter
+mkdir fDbuild
+cd fDbuild
